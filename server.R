@@ -301,14 +301,98 @@ server <- function(input, output, session) {
     )
   })
 
+  output$table1_explainer <- renderUI({
+    if (!is.null(input$file)) return(NULL)
+    div(style = "max-width:700px;",
+      h4("What is Table 1?"),
+      p("In a research paper, ", tags$b("Table 1"), " is almost always the first table readers encounter 
+        It describes ", tags$em("who was in the study"), " \u2014 the characteristics of your sample.
+        You will find it in nearly every clinical, public health, and social science paper, usually
+        near the beginning of the Results section. Sometimes it is in the methods section, typically when
+        the paper reports a retrospective analysis of existing data that has been reported previously.
+        (Note, table 1 is not always the first table; table 1 is a figurative term, not a literal one)"),
+      p("A Table 1 typically shows things like age, sex, race/ethnicity, education level, and any
+        clinical or demographic measures relevant to the study. The goal is to give readers a clear
+        picture of your participants so they can judge how representative the sample is and whether
+        the findings might apply to other groups."),
+
+      h5("Why do we include it?"),
+      tags$ul(
+        tags$li("It lets readers assess whether your sample is similar to the population they care about."),
+        tags$li("It documents potential confounders \u2014 variables that could explain your results."),
+        tags$li("When you stratify (split by a grouping variable like Treatment vs. Control), it shows
+                whether these groups were balanced based on other demographics, which can be especially important in clinical trials.")
+      ),
+
+      h5("What usually goes in it?"),
+      p("Include variables that describe your participants. Common choices:"),
+      tags$ul(
+        tags$li(tags$b("Demographics:"), " age, sex, race/ethnicity, education, income, work setting, employment"),
+        tags$li(tags$b("Clinical/health measures:"), " BMI, blood pressure, diagnosis"),
+        tags$li(tags$b("Study-specific baseline variables:"), " other variables that are specific to your participants that help to describe them")
+      ),
+      p("Generally, we omit outcome variables (those belong in your results) and any ID columns."),
+
+      h5("How are statistics reported?"),
+      tags$ul(
+        tags$li(tags$b("Continuous variables"), " (numbers on a scale, like age or BMI): reported as
+                Mean (SD) when data are roughly normally distributed, or Median [IQR] when skewed."),
+        tags$li(tags$b("Categorical variables"), " (groups, like sex or smoker status): reported as
+                N (%) \u2014 count and percentage in each category.")
+      )
+    )
+  })
+
   output$table1_output <- renderUI({
     tbl <- tryCatch(table_built(), error = function(e) NULL)
     if (is.null(tbl)) {
       return(p(class = "text-muted",
-        "Configure your table on the previous tab and click 'Generate Table' to see a preview."
+        "Configure your table on the previous tab and click \u2018Generate Table\u2019 to see a preview."
       ))
     }
     HTML(as.character(tbl))
+  })
+
+  observeEvent(input$title_tips_link, {
+    showModal(modalDialog(
+      title = "Writing a Good Table Title",
+      div(
+        p("A table title should be ", tags$b("self-contained"), " \u2014 a reader should understand
+          the table without reading the full paper. Good titles are specific and in Title Case."),
+        tags$ul(
+          tags$li(tags$b("Too vague:"), tags$em(' \u201cTable 1. Characteristics.\u201d')),
+          tags$li(tags$b("Better:"), tags$em(' \u201cTable 1. Baseline Demographic and Clinical Characteristics of Study Participants.\u201d')),
+          tags$li(tags$b("With strata:"), tags$em(' \u201cTable 1. Participant Characteristics by Treatment Group (N\u00a0=\u00a0120).\u201d'))
+        ),
+        p("Including the total sample size (N) in the title is a small detail readers appreciate."),
+        p(tags$b("Title Case reminder:"), " Capitalize the first letter of each major word.
+          \u201cBaseline Characteristics\u201d not \u201cbaseline characteristics\u201d.")
+      ),
+      easyClose = TRUE,
+      footer = modalButton("Close")
+    ))
+  })
+
+  observeEvent(input$note_tips_link, {
+    showModal(modalDialog(
+      title = "Writing a Useful Table Note",
+      div(
+        p("Use the note to explain anything that is not obvious from the table itself:"),
+        tags$ul(
+          tags$li("How statistics are presented: ",
+            tags$em('\u201cData are presented as Mean (SD) or N (%).\u201d')),
+          tags$li("What abbreviations mean: ",
+            tags$em('\u201cIQR\u00a0=\u00a0interquartile range; SD\u00a0=\u00a0standard deviation.\u201d')),
+          tags$li("How missing data were handled: ",
+            tags$em('\u201cMissing values are excluded from percentage calculations.\u201d')),
+          tags$li("The source of any external data, if applicable.")
+        ),
+        p("Notes are typically written in sentence form and start with the word ", tags$em("\u201cNote.\u201d"),
+          " Keep them concise \u2014 include only what readers genuinely need to interpret the table.")
+      ),
+      easyClose = TRUE,
+      footer = modalButton("Close")
+    ))
   })
 
   # ── Word Export ───────────────────────────────────────────────────────────────

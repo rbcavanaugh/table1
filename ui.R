@@ -50,6 +50,7 @@ ui <- fluidPage(
             tags$ul(
               tags$li("One row per participant/observation"),
               tags$li("One column per variable"),
+              tags$li("Only include columns for variables that you want to include in the table"),
               tags$li("Column names without spaces or special characters"),
               tags$li("A grouping column if you plan to stratify (e.g., ", tags$code("group"), ")")
             ),
@@ -63,6 +64,7 @@ ui <- fluidPage(
           )
         ),
         column(8,
+          uiOutput("table1_explainer"),
           uiOutput("upload_status"),
           uiOutput("data_warnings"),
           DTOutput("data_preview")
@@ -135,6 +137,27 @@ ui <- fluidPage(
             textAreaInput("table_note", "Note (optional):",
               placeholder = "Note: Data are presented as...",
               rows = 3
+            ),
+            hr(),
+            h5("Pre-Download Checklist"),
+            tags$ul(style = "font-size:0.85em; padding-left:18px;",
+              tags$li(
+                actionLink("title_tips_link", "Title is specific and in Title Case"),
+                " \u2014 mention what is described and, if stratified, the grouping variable."
+              ),
+              tags$li(
+                actionLink("note_tips_link", "Note explains how statistics are presented"),
+                " and defines all abbreviations (SD, IQR, etc.)."
+              ),
+              tags$li(tags$b("Labels are in Title Case and proofread."),
+                ' Use \u201cAge (Years)\u201d not \u201cage\u201d.'
+              ),
+              tags$li(tags$b("Units are in labels where needed"),
+                ' (e.g., \u201cWeight (kg)\u201d, \u201cSystolic BP (mmHg)\u201d).'
+              ),
+              tags$li(tags$b("Outcome variables are excluded."),
+                " Table 1 describes participants, not results."
+              )
             ),
             hr(),
             downloadButton("download_word", "Download as Word (.docx)",
