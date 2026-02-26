@@ -45,6 +45,14 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, "main_tabs", selected = "2. Configure Table")
   })
 
+  observeEvent(input$go_to_about, {
+    updateTabsetPanel(session, "main_tabs", selected = "About")
+  })
+
+  observeEvent(input$copy_table_btn, {
+    session$sendCustomMessage("copy_table", list())
+  })
+
   output$data_warnings <- renderUI({
     req(data_raw())
     msgs <- check_data(data_raw())

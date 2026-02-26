@@ -5,6 +5,58 @@ ui <- fluidPage(
   titlePanel("Table 1 Generator"),
 
   tags$script(HTML("
+    Shiny.addCustomMessageHandler('copy_table', function(msg) {
+      var status = document.getElementById('copy_table_status');
+      var table  = document.querySelector('#table1_output table');
+      if (!table) {
+        status.innerText = 'Error: generate the table first.';
+        status.style.color = '#c0392b';
+        return;
+      }
+      var rows = Array.from(table.querySelectorAll('tr'));
+      var tsv  = rows.map(function(row) {
+        return Array.from(row.querySelectorAll('th, td')).map(function(cell) {
+          return cell.innerText.replace(/\\n/g, ' ').replace(/\\t/g, ' ').trim();
+        }).join('\\t');
+      }).join('\\n');
+
+      function onSuccess() {
+        status.innerText = 'Copied! Paste into Excel or Google Sheets.';
+        status.style.color = '#27ae60';
+      }
+      function onError(err) {
+        status.innerText = 'Error: ' + err;
+        status.style.color = '#c0392b';
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(tsv).then(onSuccess).catch(function(err) {
+          // fallback
+          try {
+            var ta = document.createElement('textarea');
+            ta.value = tsv;
+            ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            var ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            ok ? onSuccess() : onError('execCommand returned false');
+          } catch(e) { onError(e); }
+        });
+      } else {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = tsv;
+          ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.focus(); ta.select();
+          var ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          ok ? onSuccess() : onError('Clipboard API not available in this browser');
+        } catch(e) { onError(e); }
+      }
+    });
+
     Shiny.addCustomMessageHandler('download_docx', function(data) {
       var byteChars = atob(data.base64);
       var byteNums  = new Uint8Array(byteChars.length);
@@ -81,6 +133,11 @@ ui <- fluidPage(
             hr(),
             downloadButton("download_example", "Download Example Dataset",
               style = "width:100%"
+            ),
+            hr(),
+            p(style = "font-size:0.82em; color:#666; margin-bottom:0;",
+              icon("lock"), " Your data never leaves your computer. ",
+              actionLink("go_to_about", "Privacy info \u2192")
             )
           )
         ),
@@ -187,6 +244,12 @@ ui <- fluidPage(
             br(), br(),
             p(class = "text-muted", style = "font-size:0.85em;",
               "The Word file is formatted in APA style (Times New Roman, horizontal rules only)."
+            ),
+            actionButton("copy_table_btn", "Copy and Paste into Excel/Sheets",
+              style = "width:100%;"
+            ),
+            tags$p(id = "copy_table_status",
+              style = "font-size:0.85em; margin-top:6px; min-height:1.2em;"
             )
           )
         ),
@@ -196,6 +259,95 @@ ui <- fluidPage(
             "HTML preview below. The downloaded .docx will be APA-formatted."
           ),
           uiOutput("table1_output")
+        )
+      )
+    ),
+
+    # ── Tab 4: About ─────────────────────────────────────────────────────────
+    tabPanel("About",
+      br(),
+      fluidRow(
+        column(8, offset = 2,
+
+          h3("About This Site"),
+          p("Table 1 Generator is a browser-based tool for creating publication-ready
+            demographic tables from research data."),
+
+          hr(),
+          h4(icon("lock"), " Privacy"),
+          p("This app runs entirely in your browser using WebAssembly \u2014 a technology that
+            allows R code to execute locally on your device. When you upload a file, it is
+            loaded directly into your browser\u2019s memory and is never transmitted to any
+            server. No data is stored, logged, or accessible to anyone else. Closing the tab
+            clears everything."),
+          p("No tracking scripts, analytics, cookies, or backend server are added by this app.
+            It is hosted as a static page on GitHub Pages, which collects basic traffic data
+            (page visits) as part of its hosting service. All code for this application is
+            openly available at",
+            tags$a(href = "https://github.com/rbcavanaugh/table1", target = "_blank", icon("github"),
+                   " github.com/rbcavanaugh/table1"), "You are welcome to inspect it, adapt it, or use it as a starting point for your
+            own projects."),
+          hr(),
+          h4(icon("book"), " Acknowledgements & Citations"),
+                    p("The core table generation in this app is powered by the ", tags$code("table1"),
+            " R package by Benjamin Rich:"),
+          div(class = "hint-box", style = "font-family: monospace; font-size: 0.85em;",
+            "Rich, B. (2023).", tags$em("table1: Tables of Descriptive Statistics in HTML."),
+            "R package.", tags$a("https://CRAN.R-project.org/package=table1",
+              href = "https://CRAN.R-project.org/package=table1", target = "_blank")
+          ),
+
+          h5("R Packages", style = "margin-top:16px;"),
+          p("This app also depends on the following R packages:"),
+          tags$ul(
+            tags$li(tags$b("shiny"), " \u2014 Chang W, Cheng J, Allaire J, et al. ",
+              tags$em("shiny: Web Application Framework for R."),
+              tags$a(" https://CRAN.R-project.org/package=shiny",
+                href = "https://CRAN.R-project.org/package=shiny", target = "_blank")),
+            tags$li(tags$b("flextable"), " \u2014 Gohel D, Skintzos P. ",
+              tags$em("flextable: Functions for Tabular Reporting."),
+              tags$a(" https://CRAN.R-project.org/package=flextable",
+                href = "https://CRAN.R-project.org/package=flextable", target = "_blank")),
+            tags$li(tags$b("officer"), " \u2014 Gohel D. ",
+              tags$em("officer: Manipulation of Microsoft Word and PowerPoint Documents."),
+              tags$a(" https://CRAN.R-project.org/package=officer",
+                href = "https://CRAN.R-project.org/package=officer", target = "_blank")),
+            tags$li(tags$b("DT"), " \u2014 Xie Y, Cheng J, Tan X. ",
+              tags$em("DT: A Wrapper of the JavaScript Library \u2018DataTables\u2019."),
+              tags$a(" https://CRAN.R-project.org/package=DT",
+                href = "https://CRAN.R-project.org/package=DT", target = "_blank")),
+            tags$li(tags$b("readxl"), " \u2014 Wickham H, Bryan J. ",
+              tags$em("readxl: Read Excel Files."),
+              tags$a(" https://CRAN.R-project.org/package=readxl",
+                href = "https://CRAN.R-project.org/package=readxl", target = "_blank")),
+            tags$li(tags$b("base64enc"), " \u2014 Urbanek S. ",
+              tags$em("base64enc: Tools for base64 Encoding."),
+              tags$a(" https://CRAN.R-project.org/package=base64enc",
+                href = "https://CRAN.R-project.org/package=base64enc", target = "_blank"))
+          ),
+
+          h5("WebR & Shinylive", style = "margin-top:16px;"),
+          p("This app is deployed using Shinylive and WebR, which together compile R to
+            WebAssembly so the application runs entirely in the browser without a server."),
+          tags$ul(
+            tags$li(tags$b("shinylive"), " \u2014 Schloerke B, Cheng J. ",
+              tags$em("shinylive: Run \u2018shiny\u2019 Applications in the Browser."),
+              tags$a(" https://CRAN.R-project.org/package=shinylive",
+                href = "https://CRAN.R-project.org/package=shinylive", target = "_blank")),
+            tags$li(tags$b("webR"), " \u2014 Stagg G. ",
+              tags$em("webR: R in the Browser."),
+              tags$a(" https://docs.r-wasm.org/webr/latest/",
+                href = "https://docs.r-wasm.org/webr/latest/", target = "_blank"))
+          ),
+
+          hr(),
+          p(class = "text-muted", style = "font-size:0.85em;",
+            "This app was built using ",
+            tags$a("Claude Code", href = "https://claude.ai/code", target = "_blank"),
+            " by Anthropic."
+          ),
+
+          br()
         )
       )
     )
