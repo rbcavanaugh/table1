@@ -325,7 +325,7 @@ ui <- fluidPage(
         column(8, offset = 2,
 
           h3("About This Site"),
-          p("Table 1 Generator is a browser-based tool for creating publication-ready
+          p("Table 1 Builder is a browser-based tool for creating publication-ready
             demographic tables from research data."),
 
           hr(),
@@ -340,7 +340,7 @@ ui <- fluidPage(
             (page visits) as part of its hosting service. All code for this application is
             openly available at",
             tags$a(href = "https://github.com/rbcavanaugh/table1", target = "_blank", icon("github"),
-                   " github.com/rbcavanaugh/table1"), "You are welcome to inspect it, adapt it, or use it as a starting point for your
+                   " github.com/rbcavanaugh/table1"), ". You are welcome to inspect it, adapt it, or use it as a starting point for your
             own projects."),
           hr(),
           h4(icon("book"), " Acknowledgements & Citations"),

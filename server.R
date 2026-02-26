@@ -308,7 +308,7 @@ server <- function(input, output, session) {
     if (!is.null(input$file)) return(NULL)
     div(style = "max-width:700px;",
       h4("What is Table 1?"),
-      p("In a research paper, ", tags$b("Table 1"), " is almost always the first table readers encounter 
+      p("In a research paper, ", tags$b("Table 1"), " is almost always the first table readers encounter.
         It describes ", tags$em("who was in the study"), " \u2014 the characteristics of your sample.
         You will find it in nearly every clinical, public health, and social science paper, usually
         near the beginning of the Results section. Sometimes it is in the methods section, typically when
