@@ -4,6 +4,27 @@ library(DT)
 ui <- fluidPage(
   titlePanel("Table 1 Generator"),
 
+  tags$script(HTML("
+    Shiny.addCustomMessageHandler('download_docx', function(data) {
+      var byteChars = atob(data.base64);
+      var byteNums  = new Uint8Array(byteChars.length);
+      for (var i = 0; i < byteChars.length; i++) {
+        byteNums[i] = byteChars.charCodeAt(i);
+      }
+      var blob = new Blob([byteNums], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      });
+      var url = URL.createObjectURL(blob);
+      var a   = document.createElement('a');
+      a.href  = url;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  ")),
+
   tags$style(HTML("
     .var-row {
       border: 1px solid #ddd;
@@ -160,8 +181,8 @@ ui <- fluidPage(
               )
             ),
             hr(),
-            downloadButton("download_word", "Download as Word (.docx)",
-              class = "btn-success", style = "width:100%"
+            actionButton("download_word_btn", "Download as Word (.docx)",
+              class = "btn-success", style = "width:100%", icon = icon("download")
             ),
             br(), br(),
             p(class = "text-muted", style = "font-size:0.85em;",

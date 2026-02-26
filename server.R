@@ -1,11 +1,10 @@
 library(shiny)
-library(dplyr)
-library(readr)
 library(readxl)
 library(DT)
 library(table1)
 library(flextable)
 library(officer)
+library(base64enc)
 
 server <- function(input, output, session) {
 
@@ -16,18 +15,18 @@ server <- function(input, output, session) {
     ext <- tolower(tools::file_ext(input$file$name))
     tryCatch(
       switch(ext,
-        csv  = read_csv(input$file$datapath, show_col_types = FALSE),
-        tsv  = read_tsv(input$file$datapath, show_col_types = FALSE),
+        csv  = read.csv(input$file$datapath, stringsAsFactors = FALSE, check.names = FALSE, na.strings = c("", "NA")),
+        tsv  = read.delim(input$file$datapath, stringsAsFactors = FALSE, check.names = FALSE, na.strings = c("", "NA")),
         xlsx = read_excel(input$file$datapath),
         xls  = read_excel(input$file$datapath),
         {
           showNotification("Unsupported file type. Please upload a CSV, TSV, or Excel file.",
-            type = "error")
+            type = "error", duration = NULL)
           NULL
         }
       ),
       error = function(e) {
-        showNotification(paste("Could not read file:", e$message), type = "error")
+        showNotification(paste("Could not read file:", e$message), type = "error", duration = NULL)
         NULL
       }
     )
@@ -225,7 +224,7 @@ server <- function(input, output, session) {
     }, vars)
 
     if (length(included) == 0) {
-      showNotification("Select at least one variable to include.", type = "warning")
+      showNotification("Select at least one variable to include.", type = "warning", duration = NULL)
       return(NULL)
     }
 
@@ -295,7 +294,7 @@ server <- function(input, output, session) {
         overall            = overall_label
       ),
       error = function(e) {
-        showNotification(paste("Table generation failed:", e$message), type = "error")
+        showNotification(paste("Table generation failed:", e$message), type = "error", duration = NULL)
         NULL
       }
     )
@@ -397,42 +396,46 @@ server <- function(input, output, session) {
 
   # ── Word Export ───────────────────────────────────────────────────────────────
 
-  output$download_word <- downloadHandler(
-    filename = function() {
-      paste0("table1_", format(Sys.Date(), "%Y%m%d"), ".docx")
-    },
-    content = function(file) {
-      tbl <- tryCatch(table_built(), error = function(e) NULL)
-      if (is.null(tbl)) {
-        showNotification("Generate the table before downloading.", type = "warning")
-        return()
-      }
-
-      caption <- trimws(input$table_caption %||% "")
-      note    <- trimws(input$table_note    %||% "")
-
-      ft <- t1flex(tbl) |>
-        set_table_properties(align = "left") |>
-        autofit(add_w = 0, add_h = 1)
-
-      if (nchar(caption) > 0) {
-        ft <- set_caption(ft,
-          caption           = apa_caption(caption),
-          align_with_table  = TRUE,
-          word_stylename    = "Normal",
-          fp_p              = fp_par(text.align = "left")
-        )
-      }
-
-      if (nchar(note) > 0) {
-        ft <- add_footer_lines(ft, values = note)
-      }
-
-      ft <- theme_apa2(ft)
-
-      doc <- read_docx()
-      doc <- body_add_flextable(doc, value = ft)
-      print(doc, target = file)
+  observeEvent(input$download_word_btn, {
+    tbl <- tryCatch(table_built(), error = function(e) NULL)
+    if (is.null(tbl)) {
+      showNotification("Generate the table before downloading.", type = "warning", duration = NULL)
+      return()
     }
-  )
+
+    caption <- trimws(input$table_caption %||% "")
+    note    <- trimws(input$table_note    %||% "")
+
+    ft <- t1flex(tbl) |>
+      set_table_properties(align = "left") |>
+      autofit(add_w = 0, add_h = 1)
+
+    if (nchar(caption) > 0) {
+      ft <- set_caption(ft,
+        caption           = apa_caption(caption),
+        align_with_table  = TRUE,
+        word_stylename    = "Normal",
+        fp_p              = fp_par(text.align = "left")
+      )
+    }
+
+    if (nchar(note) > 0) {
+      ft <- add_footer_lines(ft, values = note)
+    }
+
+    ft <- theme_apa2(ft)
+
+    tmp <- tempfile(fileext = ".docx")
+    doc <- read_docx()
+    doc <- body_add_flextable(doc, value = ft)
+    print(doc, target = tmp)
+
+    raw_bytes <- readBin(tmp, what = "raw", n = file.info(tmp)$size)
+    b64 <- base64enc::base64encode(raw_bytes)
+
+    session$sendCustomMessage("download_docx", list(
+      base64   = b64,
+      filename = paste0("table1_", format(Sys.Date(), "%Y%m%d"), ".docx")
+    ))
+  })
 }
