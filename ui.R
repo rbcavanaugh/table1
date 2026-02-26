@@ -2,7 +2,43 @@ library(shiny)
 library(DT)
 
 ui <- fluidPage(
-  titlePanel("Table 1 Generator"),
+
+  tags$head(
+    tags$link(
+      href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap",
+      rel  = "stylesheet"
+    ),
+    tags$style(paste(
+      readLines(system.file("table1_defaults_1.0/table1_defaults.css", package = "table1")),
+      collapse = "\n"
+    )),
+    tags$style(HTML("
+      .Rtable1 table, table.Rtable1 {
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.9em !important;
+      }
+      .Rtable1 th, .Rtable1 td {
+        border-top: none !important;
+        border-left: none !important;
+        border-right: none !important;
+      }
+      .Rtable1 thead > tr:first-child > th {
+        border-top: 2pt solid black !important;
+      }
+      .Rtable1 thead > tr:last-child > th {
+        border-bottom: 1pt solid black !important;
+      }
+      .Rtable1 tbody > tr:last-child > td {
+        border-bottom: 2pt solid black !important;
+      }
+      .Rtable1 .firstrow.rowlabel {
+        font-weight: bold !important;
+      }
+      .Rtable1 th.grouplabel > div {
+        border-bottom: 1pt solid black !important;
+      }
+    "))
+  ),
 
   tags$script(src = "copy.js"),
 
@@ -28,12 +64,66 @@ ui <- fluidPage(
   ")),
 
   tags$style(HTML("
+    body, .form-control, .selectize-input, .selectize-dropdown, button, label, p, li {
+      font-family: 'Inter', sans-serif;
+    }
+    body {
+      background-color: #f8f9fa;
+      line-height: 1.6;
+    }
+    .app-header {
+      background: #2c3e50;
+      margin: -15px -15px 24px -15px;
+      padding: 28px 30px 20px 30px;
+    }
+    .app-header h2 {
+      color: #ffffff;
+      font-size: 1.45em;
+      font-weight: 600;
+      margin: 0 0 2px 0;
+    }
+    .app-header p {
+      color: rgba(255,255,255,0.65);
+      font-size: 0.88em;
+      margin: 0;
+    }
+    .well {
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      background: #ffffff;
+    }
+    .nav-tabs {
+      border-bottom: 2px solid #dee2e6;
+    }
+    .nav-tabs > li > a {
+      border: none;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      color: #666;
+      font-weight: 500;
+    }
+    .nav-tabs > li > a:hover {
+      border: none;
+      border-bottom: 3px solid #ced4da;
+      background: transparent;
+      color: #333;
+    }
+    .nav-tabs > li.active > a,
+    .nav-tabs > li.active > a:hover,
+    .nav-tabs > li.active > a:focus {
+      border: none;
+      border-bottom: 3px solid #2c3e50;
+      background: transparent;
+      color: #2c3e50;
+      font-weight: 600;
+    }
     .var-row {
-      border: 1px solid #ddd;
-      border-radius: 4px;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
       padding: 8px 10px;
       margin-bottom: 6px;
-      background: #fafafa;
+      background: #f8f9fa;
     }
     .hint-box {
       background: #e8f4fd;
@@ -51,8 +141,13 @@ ui <- fluidPage(
       font-size: 0.85em;
       border-radius: 2px;
     }
-    .config-header { font-weight: bold; color: #555; font-size: 0.8em; text-transform: uppercase; margin-bottom: 4px; }
+    .config-header { font-weight: 600; color: #555; font-size: 0.8em; text-transform: uppercase; margin-bottom: 4px; }
   ")),
+
+  div(class = "app-header",
+    tags$h2("Table 1 Builder"),
+    tags$p("Publication-ready demographic tables")
+  ),
 
   tabsetPanel(
     id = "main_tabs",
@@ -79,6 +174,13 @@ ui <- fluidPage(
             ),
             p(class = "text-muted", style = "font-size:0.85em;",
               "Clean, analysis-ready data only. No formulas, merged cells, or multi-row headers."
+            ),
+            p(tags$b("Missing data: "),
+              "Leave missing cells ", tags$b("empty"), " or enter ",
+              tags$code("NA"), ". Do not use placeholder values like ",
+              tags$code("999"), ", ", tags$code("-99"), ", ",
+              tags$code("N/A"), ", or ", tags$code("."),
+              " — these will be treated as real data values."
             ),
             hr(),
             downloadButton("download_example", "Download Example Dataset",
@@ -129,7 +231,11 @@ ui <- fluidPage(
             hr(),
             checkboxInput("show_missing", "Show missing data count", value = TRUE),
             hr(),
-            uiOutput("suggestions_ui")
+            uiOutput("suggestions_ui"),
+            hr(),
+            actionButton("go_preview", "Generate Table \u2192",
+              class = "btn-primary", style = "width:100%"
+            )
           )
         ),
         column(8,
@@ -143,11 +249,7 @@ ui <- fluidPage(
             column(5, p(class = "config-header", "Display Label")),
             column(3, p(class = "config-header", "Type"))
           ),
-          uiOutput("variable_config_ui"),
-          br(),
-          actionButton("go_preview", "Generate Table \u2192",
-            class = "btn-primary btn-lg"
-          )
+          uiOutput("variable_config_ui")
         )
       )
     ),
@@ -209,10 +311,9 @@ ui <- fluidPage(
         ),
         column(8,
           h4("Table Preview"),
-          p(class = "text-muted",
-            "HTML preview below. The downloaded .docx will be APA-formatted."
-          ),
-          uiOutput("table1_output")
+          div(style = "background:#fff; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.08); padding:24px; overflow-x:auto;",
+            uiOutput("table1_output")
+          )
         )
       )
     ),
